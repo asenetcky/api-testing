@@ -25,6 +25,22 @@ fn parse_url() {
     println!("Path: {}", parsed_url.path());
     println!("Query: {}", parsed_url.query().unwrap_or(""));
     println!("Fragment: {}", parsed_url.fragment().unwrap_or(""));
+    println!("Domain: {}", parsed_url.domain().unwrap_or(""));
+    println!("Username: {}", parsed_url.username());
+    println!("Password: {}", parsed_url.password().unwrap_or(""));
+    println!(
+        "Path Segments: {}",
+        parsed_url
+            .path_segments()
+            .unwrap()
+            .collect::<Vec<_>>()
+            .join("/")
+    );
+
+    let mut query_pairs = parsed_url.query_pairs();
+    while let Some((key, value)) = query_pairs.next() {
+        println!("{}: {}", key, value);
+    }
 }
 
 fn playground() {
