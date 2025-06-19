@@ -1,4 +1,7 @@
+use polars::io::json;
 use polars::prelude::*;
+use reqwest::*;
+use serde_json::*;
 use std::fs::File;
 use std::io::*;
 use url::Url;
@@ -19,7 +22,7 @@ fn parse_url() {
     let url: &'static str =
         "https://api.census.gov/data/2023/acs/acs1?get=group(B05006)&ucgid=0400000US09";
     let parsed_url: Url = Url::parse(url).unwrap();
-
+    println!("Parsed URL: {}", parsed_url);
     println!("Scheme: {}", parsed_url.scheme());
     println!("Host: {}", parsed_url.host_str().unwrap_or(""));
     println!("Path: {}", parsed_url.path());
@@ -67,4 +70,19 @@ fn read_lines(filename: &str) -> std::io::Result<Vec<String>> {
         }
     }
     Ok(lines)
+}
+
+fn pull_data(url: Url) -> DataFrame {
+    let client = reqwest::Client::new();
+    let response = client.get(url).send();
+    let json_data = match response {
+        Ok(resp) => resp.text().unwrap(),
+        Err(e) => {
+            eprintln!("Error fetching data: {}", e);
+            return DataFrame::default();
+        }
+    };
+    let df = json::from_str(&json_data).unwrap();
+    println!("DataFrame: {}", df);
+    df
 }
