@@ -80,6 +80,9 @@ name = "api-testing"
 version = "0.1.0"
 dependencies = [
  "polars",
+ "serde",
+ "serde_json",
+ "url",
 ]
 
 [[package]]
