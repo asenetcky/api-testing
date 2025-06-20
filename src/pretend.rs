@@ -13,5 +13,7 @@ pub fn read_lines(filename: &str) -> std::io::Result<Vec<String>> {
             Err(e) => eprintln!("Error reading line: {}", e),
         }
     }
+    lines.sort();
+    lines.dedup();
     Ok(lines)
 }
