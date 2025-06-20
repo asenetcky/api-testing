@@ -1,9 +1,8 @@
 use polars::prelude::*;
+use std::collections::HashMap;
 
-// for reference - long dataframe with header: str and  value: str
-
+/// Extract the geo dataframe (always geo_id, ucgid, geo_name columns, missing as None)
 pub fn fetch_geo_dataframe(df: DataFrame) -> DataFrame {
-    // 1. Lowercase header, filter for geo_id, name, ucgid
     let filtered = df
         .clone()
         .lazy()
@@ -24,8 +23,6 @@ pub fn fetch_geo_dataframe(df: DataFrame) -> DataFrame {
         .collect()
         .expect("could not parse dataframe");
 
-    // 2. Extract headers and values into a map for lookup
-    use std::collections::HashMap;
     let header_vals: HashMap<String, Option<String>> = {
         let headers_series = filtered
             .column("header")
@@ -56,15 +53,57 @@ pub fn fetch_geo_dataframe(df: DataFrame) -> DataFrame {
             .collect()
     };
 
-    // 3. Ensure all three columns are present, fill missing with None
     let col_names = ["geo_id", "ucgid", "geo_name"];
     let cols: Vec<Column> = col_names
         .iter()
         .map(|&col| {
             let val = header_vals.get(col).cloned().flatten();
-            Series::new(col.into(), &[val]).into_column()
+            Series::new(col.into(), [val]).into_column()
         })
         .collect();
 
     DataFrame::new(cols).expect("could not build geo dataframe")
+}
+
+/// Forward fill each geo dataframe and vertically concatenate them.
+pub fn join_and_fill_geo_dfs(geo_dfs: &[DataFrame]) -> DataFrame {
+    if geo_dfs.is_empty() {
+        return DataFrame::default();
+    }
+    let mut filled = Vec::new();
+    for df in geo_dfs {
+        let filled_columns: Vec<_> = df
+            .get_columns()
+            .iter()
+            .map(|col| {
+                col.as_materialized_series()
+                    .fill_null(polars::prelude::FillNullStrategy::Forward(None))
+                    .unwrap()
+                    .into_column()
+            })
+            .collect();
+        filled.push(DataFrame::new(filled_columns).expect("failed to build filled geo df"));
+    }
+    // Vertically concatenate all filled geo dataframes
+    let mut out = filled[0].clone();
+    for df in filled.iter().skip(1) {
+        out.vstack_mut(df).expect("failed to vstack geo dfs");
+    }
+    out
+}
+
+/// Filter out geo rows from a long-format DataFrame
+pub fn filter_main_dataframe(df: &DataFrame) -> DataFrame {
+    df.clone()
+        .lazy()
+        .filter(
+            col("header")
+                .str()
+                .to_lowercase()
+                .neq(lit("geo_id"))
+                .and(col("header").str().to_lowercase().neq(lit("ucgid")))
+                .and(col("header").str().to_lowercase().neq(lit("name"))),
+        )
+        .collect()
+        .expect("could not filter main dataframe")
 }
