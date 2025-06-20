@@ -17,28 +17,6 @@ pub async fn pull_data(client: &reqwest::Client, url: &str) -> Option<DataFrame>
     let headers = arr[0].as_array()?;
     let data_rows = &arr[1..];
 
-    // Transpose rows to columns
-    // let mut columns: Vec<Vec<String>> = vec![Vec::new(); headers.len()];
-    // for row in data_rows {
-    //     let row_arr = row.as_array()?;
-    //     for (i, cell) in row_arr.iter().enumerate() {
-    //         columns[i].push(cell.as_str().unwrap_or("").to_string());
-    //     }
-    // }
-
-    // --- Wide format code for reference ---
-    // // Build Column for each header/column pair
-    // let columns: Vec<Column> = headers
-    //     .iter()
-    //     .zip(columns.into_iter())
-    //     .map(|(header, col)| {
-    //         let name = header.as_str().unwrap_or("unknown").to_string();
-    //         // Create a Series, then convert to Column
-    //         Series::new(name.into(), col).into_column()
-    //     })
-    //     .collect();
-    // let df = DataFrame::new(columns).ok()?;
-
     // Reshape to long format: columns "header" and "value"
     let mut header_col = Vec::new();
     let mut value_col = Vec::new();
@@ -60,3 +38,25 @@ pub async fn pull_data(client: &reqwest::Client, url: &str) -> Option<DataFrame>
 
     Some(df)
 }
+
+// Transpose rows to columns
+// let mut columns: Vec<Vec<String>> = vec![Vec::new(); headers.len()];
+// for row in data_rows {
+//     let row_arr = row.as_array()?;
+//     for (i, cell) in row_arr.iter().enumerate() {
+//         columns[i].push(cell.as_str().unwrap_or("").to_string());
+//     }
+// }
+
+// --- Wide format code for reference ---
+// // Build Column for each header/column pair
+// let columns: Vec<Column> = headers
+//     .iter()
+//     .zip(columns.into_iter())
+//     .map(|(header, col)| {
+//         let name = header.as_str().unwrap_or("unknown").to_string();
+//         // Create a Series, then convert to Column
+//         Series::new(name.into(), col).into_column()
+//     })
+//     .collect();
+// let df = DataFrame::new(columns).ok()?;

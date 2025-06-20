@@ -19,5 +19,6 @@ pub async fn run() -> Result<(), Box<dyn std::error::Error>> {
             None => println!("DataFrame {}: Failed to fetch or parse.", i + 1),
         }
     }
+    // let geo = &results[1].clone();
     Ok(())
 }

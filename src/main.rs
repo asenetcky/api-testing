@@ -1,6 +1,7 @@
 use crate::run::*;
 
 pub mod acs;
+pub mod data;
 pub mod pretend;
 pub mod run;
 
