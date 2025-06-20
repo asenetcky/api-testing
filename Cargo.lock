@@ -79,6 +79,7 @@ dependencies = [
 name = "api-testing"
 version = "0.1.0"
 dependencies = [
+ "futures",
  "polars",
  "reqwest",
  "serde",
