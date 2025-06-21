@@ -85,8 +85,3 @@ pub fn filter_main_dataframe(df: &DataFrame) -> DataFrame {
 }
 
 // going to some of this to the url impl eventually
-
-pub async fn fetch_labels() {
-    let pretend = vec![PLACEHOLDER_VAR_URL.to_string()];
-    let results = urls::get_census(&pretend).await;
-}

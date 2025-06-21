@@ -39,6 +39,45 @@ pub async fn pull_data(client: &reqwest::Client, url: &str) -> Option<DataFrame>
     Some(df)
 }
 
+pub async fn pull_variables(client: &reqwest::Client, url: &str) -> Option<DataFrame> {
+    let resp = client.get(url).send().await.ok()?;
+    let body = resp.text().await.ok()?;
+    let json: Value = serde_json::from_str(&body).ok()?;
+    let arr = json.as_array()?;
+    if arr.len() < 2 {
+        return None;
+    }
+    // The first element is the headers array
+    let headers = arr[0].as_array()?;
+    let header_names: Vec<String> = headers
+        .iter()
+        .map(|h| h.as_str().unwrap_or("unknown").to_string())
+        .collect();
+
+    // The rest are data rows
+    let data_rows = &arr[1..];
+
+    // For each header, collect a Vec<String> of values
+    let mut columns: Vec<Vec<String>> = vec![Vec::new(); header_names.len()];
+    for row in data_rows {
+        let row_arr = row.as_array()?;
+        for (i, cell) in row_arr.iter().enumerate() {
+            columns[i].push(cell.as_str().unwrap_or("").to_string());
+        }
+    }
+
+    // Build a Series for each column
+    let series: Vec<Series> = header_names
+        .iter()
+        .zip(columns.into_iter())
+        .map(|(name, col)| Series::new(name.into(), col))
+        .collect();
+
+    let columns: Vec<Column> = series.into_iter().map(|s| s.into_column()).collect();
+    let df = DataFrame::new(columns).ok()?;
+    Some(df)
+}
+
 // Transpose rows to columns
 // let mut columns: Vec<Vec<String>> = vec![Vec::new(); headers.len()];
 // for row in data_rows {

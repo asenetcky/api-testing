@@ -42,10 +42,22 @@ impl CensusAPIEndpoint {
     // }
 }
 
-pub async fn get_census(urls: &[String]) -> Vec<Option<DataFrame>> {
+/// For endpoints that return main/geo data (with "header" column)
+pub async fn get_census_data(urls: &[String]) -> Vec<Option<DataFrame>> {
     let client = reqwest::Client::new();
 
     let futures = urls.iter().map(|url| acs::pull_data(&client, url.as_str()));
+    let results: Vec<Option<DataFrame>> = join_all(futures).await;
+    results
+}
+
+/// For endpoints that return variable data (with "name", "label", "concept" columns)
+pub async fn get_census_variables(urls: &[String]) -> Vec<Option<DataFrame>> {
+    let client = reqwest::Client::new();
+
+    let futures = urls
+        .iter()
+        .map(|url| acs::pull_variables(&client, url.as_str()));
     let results: Vec<Option<DataFrame>> = join_all(futures).await;
     results
 }

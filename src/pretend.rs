@@ -21,21 +21,15 @@ pub fn read_lines(filename: &str) -> std::io::Result<Vec<String>> {
 use polars::prelude::*;
 
 /// Display a slice of Option<DataFrame> with a given label.
-pub fn display(results: &[Option<DataFrame>], label: &str) {
-    for (i, df_opt) in results.iter().enumerate() {
-        match df_opt {
-            Some(df) => {
-                println!("{} {}:\n{}", label, i + 1, df);
-            }
-            None => {
-                println!("{} {}: Failed to fetch or parse.", label, i + 1);
-            }
-        }
+pub fn display(results: &[DataFrame], label: &str) {
+    for (i, df) in results.iter().enumerate() {
+        println!("{} {}:\n{}", label, i + 1, df);
     }
 }
 
 pub async fn fetch_labels(urls: &[String], label: &str) -> Result<(), Box<dyn std::error::Error>> {
-    let results = crate::urls::get_census(urls).await;
-    display(&results, label);
+    let results = crate::urls::get_census_variables(urls).await;
+    let dfs: Vec<_> = results.into_iter().filter_map(|opt| opt).collect();
+    display(&dfs, label);
     Ok(())
 }
