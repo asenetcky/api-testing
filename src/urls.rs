@@ -1,3 +1,7 @@
+use futures::future::join_all;
+
+use crate::acs;
+
 use polars::prelude::*;
 use reqwest;
 use std::collections::HashMap;
@@ -36,4 +40,12 @@ impl CensusAPIEndpoint {
     //     quary_params = &parsed_url.query_pairs().unwrap_or("");
 
     // }
+}
+
+pub async fn get_census(urls: &[String]) -> Vec<Option<DataFrame>> {
+    let client = reqwest::Client::new();
+
+    let futures = urls.iter().map(|url| acs::pull_data(&client, url.as_str()));
+    let results: Vec<Option<DataFrame>> = join_all(futures).await;
+    results
 }
