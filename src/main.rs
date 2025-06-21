@@ -4,6 +4,7 @@ pub mod acs;
 pub mod data;
 pub mod pretend;
 pub mod run;
+pub mod url;
 
 #[tokio::main]
 async fn main() -> Result<(), Box<dyn std::error::Error>> {

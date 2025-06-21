@@ -3,7 +3,7 @@ use polars::prelude::*;
 use reqwest;
 
 use crate::acs;
-use crate::data::{fetch_geo_dataframe, filter_main_dataframe, join_and_fill_geo_dfs};
+use crate::data::{fetch_geo_dataframe, filter_main_dataframe};
 use crate::pretend;
 
 pub async fn run() -> Result<(), Box<dyn std::error::Error>> {
