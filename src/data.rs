@@ -65,33 +65,6 @@ pub fn fetch_geo_dataframe(df: DataFrame) -> DataFrame {
     DataFrame::new(cols).expect("could not build geo dataframe")
 }
 
-/// Forward fill each geo dataframe and vertically concatenate them.
-pub fn join_and_fill_geo_dfs(geo_dfs: &[DataFrame]) -> DataFrame {
-    if geo_dfs.is_empty() {
-        return DataFrame::default();
-    }
-    let mut filled = Vec::new();
-    for df in geo_dfs {
-        let filled_columns: Vec<_> = df
-            .get_columns()
-            .iter()
-            .map(|col| {
-                col.as_materialized_series()
-                    .fill_null(polars::prelude::FillNullStrategy::Forward(None))
-                    .unwrap()
-                    .into_column()
-            })
-            .collect();
-        filled.push(DataFrame::new(filled_columns).expect("failed to build filled geo df"));
-    }
-    // Vertically concatenate all filled geo dataframes
-    let mut out = filled[0].clone();
-    for df in filled.iter().skip(1) {
-        out.vstack_mut(df).expect("failed to vstack geo dfs");
-    }
-    out
-}
-
 /// Filter out geo rows from a long-format DataFrame
 pub fn filter_main_dataframe(df: &DataFrame) -> DataFrame {
     df.clone()
