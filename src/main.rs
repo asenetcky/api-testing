@@ -4,7 +4,11 @@ pub mod acs;
 pub mod data;
 pub mod pretend;
 pub mod run;
-pub mod url;
+pub mod urls;
+
+static PLACEHOLDER_URL: &str =
+    "https://api.census.gov/data/2023/acs/acs5/subject?get=group(S2701)&ucgid=0400000US09";
+static PLACEHOLDER_VAR_URL: &str = "https://api.census.gov/data/2023/acs/acs5/subject/variables";
 
 #[tokio::main]
 async fn main() -> Result<(), Box<dyn std::error::Error>> {
@@ -13,26 +17,6 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         std::process::exit(1);
     }
     Ok(())
-
-    // let resp = reqwest::get(
-    //     "https://api.census.gov/data/2023/acs/acs1?get=group(B05006)&ucgid=0400000US09",
-    // )
-    // .await?;
-
-    // let body = resp.text().await?;
-
-    // let json: Value = serde_json::from_str(&body).expect("Failed to parse JSON");
-
-    // //    println!("{json:#?}");
-    // let is_array = json.is_array();
-    // println!("{is_array}");
-
-    // let slice0 = &json[0];
-    // let slice1 = &json[1..];
-
-    // println!("Slice: {slice0:#?}");
-    // println!("Slice: {slice1:#?}");
-    // Ok(())
 }
 
 // TODO: capture as much metadata as possible from the url
