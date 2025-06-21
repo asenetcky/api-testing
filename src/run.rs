@@ -5,47 +5,32 @@ use reqwest;
 use crate::acs;
 use crate::data::{fetch_geo_dataframe, filter_main_dataframe};
 use crate::pretend;
+use crate::urls;
 
 pub async fn run() -> Result<(), Box<dyn std::error::Error>> {
-    let urls = pretend::read_lines("census.txt")?;
-
-    let client = reqwest::Client::new();
-
-    let futures = urls.iter().map(|url| acs::pull_data(&client, url));
-    let results: Vec<Option<DataFrame>> = join_all(futures).await;
+    let pretend = pretend::read_lines("census.txt").expect("cannot read pretend lines");
+    let results = urls::get_census(&pretend).await;
 
     // Separate geo and main dataframes
-    let mut geo_dfs = Vec::new();
-    let mut main_dfs = Vec::new();
+    use crate::data::{fetch_geo_dataframe, filter_main_dataframe};
 
-    for (i, df_opt) in results.into_iter().enumerate() {
-        match df_opt {
-            Some(df) => {
-                // Extract geo dataframe
-                let geo_df = fetch_geo_dataframe(df.clone());
-                geo_dfs.push(geo_df);
+    let geo_dfs: Vec<_> = results
+        .iter()
+        .map(|df_opt| df_opt.as_ref().map(|df| fetch_geo_dataframe(df.clone())))
+        .collect();
 
-                // Filter out geo rows from main dataframe
-                let main_df = filter_main_dataframe(&df);
-                main_dfs.push(main_df);
+    let main_dfs: Vec<_> = results
+        .iter()
+        .map(|df_opt| df_opt.as_ref().map(|df| filter_main_dataframe(df)))
+        .collect();
 
-                println!("Main DataFrame {}:\n{}", i + 1, main_dfs.last().unwrap());
-                println!("Geo DataFrame {}:\n{}", i + 1, geo_dfs.last().unwrap());
-            }
-            None => {
-                println!("DataFrame {}: Failed to fetch or parse.", i + 1);
-            }
-        }
-    }
+    // Display results using generic pretend::display for iterative development
+    pretend::display(&main_dfs, "Main DataFrame");
+    pretend::display(&geo_dfs, "Geo DataFrame");
 
-    // Join and forward-fill geo dataframes horizontally
-    // let geo_joined_filled = join_and_fill_geo_dfs(&geo_dfs);
-    // if geo_joined_filled.width() > 0 {
-    //     println!(
-    //         "Joined and forward-filled geo DataFrame:\n{}",
-    //         geo_joined_filled
-    //     );
-    // }
+    // Example: fetch and display variable labels using pretend::fetch_labels
+    let var_urls = vec![crate::PLACEHOLDER_VAR_URL.to_string()];
+    pretend::fetch_labels(&var_urls, "Variable Labels").await?;
 
     Ok(())
 }

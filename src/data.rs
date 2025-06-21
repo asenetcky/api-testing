@@ -1,6 +1,9 @@
 use polars::prelude::*;
 use std::collections::HashMap;
 
+use crate::PLACEHOLDER_VAR_URL;
+use crate::urls;
+
 /// Extract the geo dataframe (always geo_id, ucgid, geo_name columns, missing as None)
 pub fn fetch_geo_dataframe(df: DataFrame) -> DataFrame {
     let filtered = df
@@ -79,4 +82,11 @@ pub fn filter_main_dataframe(df: &DataFrame) -> DataFrame {
         )
         .collect()
         .expect("could not filter main dataframe")
+}
+
+// going to some of this to the url impl eventually
+
+pub async fn fetch_labels() {
+    let pretend = vec![PLACEHOLDER_VAR_URL.to_string()];
+    let results = urls::get_census(&pretend).await;
 }
