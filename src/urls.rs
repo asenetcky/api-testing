@@ -7,6 +7,7 @@ use reqwest;
 use std::collections::HashMap;
 use url::Url;
 
+#[allow(dead_code)]
 pub struct CensusAPIEndpoint {
     base_url: reqwest::Url,
     year: u8,
@@ -16,6 +17,7 @@ pub struct CensusAPIEndpoint {
     api_key: String,
 }
 
+#[allow(dead_code)]
 impl CensusAPIEndpoint {
     fn new(
         base_url: reqwest::Url,
@@ -52,7 +54,7 @@ pub async fn get_census_data(urls: &[String]) -> Vec<Option<DataFrame>> {
 }
 
 /// For endpoints that return variable data (with "name", "label", "concept" columns)
-pub async fn get_census_variables(urls: &[String]) -> Vec<Option<DataFrame>> {
+pub async fn fetch_all_variable_labels(urls: &[String]) -> Vec<Option<DataFrame>> {
     let client = reqwest::Client::new();
 
     let futures = urls

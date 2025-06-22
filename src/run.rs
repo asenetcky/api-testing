@@ -2,7 +2,6 @@ use futures::future::join_all;
 use polars::prelude::*;
 use reqwest;
 
-use crate::acs;
 use crate::data::{fetch_geo_dataframe, filter_main_dataframe};
 use crate::pretend;
 use crate::urls;
@@ -30,7 +29,7 @@ pub async fn run() -> Result<(), Box<dyn std::error::Error>> {
 
     // Use get_census_variables for variable endpoints
     let var_urls = vec![crate::PLACEHOLDER_VAR_URL.to_string()];
-    let var_results = urls::get_census_variables(&var_urls).await;
+    let var_results = urls::fetch_all_variable_labels(&var_urls).await;
     let var_dfs: Vec<DataFrame> = var_results.into_iter().filter_map(|opt| opt).collect();
     pretend::display(&var_dfs, "Variables DataFrame");
 

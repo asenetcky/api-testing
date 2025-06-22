@@ -28,7 +28,7 @@ pub fn display(results: &[DataFrame], label: &str) {
 }
 
 pub async fn fetch_labels(urls: &[String], label: &str) -> Result<(), Box<dyn std::error::Error>> {
-    let results = crate::urls::get_census_variables(urls).await;
+    let results = crate::urls::fetch_all_variable_labels(urls).await;
     let dfs: Vec<_> = results.into_iter().filter_map(|opt| opt).collect();
     display(&dfs, label);
     Ok(())
