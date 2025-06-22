@@ -76,7 +76,7 @@ dependencies = [
 ]
 
 [[package]]
-name = "api-testing"
+name = "api_testing"
 version = "0.1.0"
 dependencies = [
  "futures",

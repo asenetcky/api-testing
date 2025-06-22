@@ -1,9 +1,11 @@
 use polars::prelude::*;
+use std::collections::HashMap;
 
-// for reference - long dataframe with header: str and  value: str
+use crate::PLACEHOLDER_VAR_URL;
+use crate::urls;
 
+/// Extract the geo dataframe (always geo_id, ucgid, geo_name columns, missing as None)
 pub fn fetch_geo_dataframe(df: DataFrame) -> DataFrame {
-    // 1. Lowercase header, filter for geo_id, name, ucgid
     let filtered = df
         .clone()
         .lazy()
@@ -24,8 +26,6 @@ pub fn fetch_geo_dataframe(df: DataFrame) -> DataFrame {
         .collect()
         .expect("could not parse dataframe");
 
-    // 2. Extract headers and values into a map for lookup
-    use std::collections::HashMap;
     let header_vals: HashMap<String, Option<String>> = {
         let headers_series = filtered
             .column("header")
@@ -56,15 +56,32 @@ pub fn fetch_geo_dataframe(df: DataFrame) -> DataFrame {
             .collect()
     };
 
-    // 3. Ensure all three columns are present, fill missing with None
     let col_names = ["geo_id", "ucgid", "geo_name"];
     let cols: Vec<Column> = col_names
         .iter()
         .map(|&col| {
             let val = header_vals.get(col).cloned().flatten();
-            Series::new(col.into(), &[val]).into_column()
+            Series::new(col.into(), [val]).into_column()
         })
         .collect();
 
     DataFrame::new(cols).expect("could not build geo dataframe")
 }
+
+/// Filter out geo rows from a long-format DataFrame
+pub fn filter_main_dataframe(df: &DataFrame) -> DataFrame {
+    df.clone()
+        .lazy()
+        .filter(
+            col("header")
+                .str()
+                .to_lowercase()
+                .neq(lit("geo_id"))
+                .and(col("header").str().to_lowercase().neq(lit("ucgid")))
+                .and(col("header").str().to_lowercase().neq(lit("name"))),
+        )
+        .collect()
+        .expect("could not filter main dataframe")
+}
+
+// going to some of this to the url impl eventually

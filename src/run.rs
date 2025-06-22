@@ -2,30 +2,36 @@ use futures::future::join_all;
 use polars::prelude::*;
 use reqwest;
 
-use crate::acs;
-use crate::data::fetch_geo_dataframe;
+use crate::data::{fetch_geo_dataframe, filter_main_dataframe};
 use crate::pretend;
+use crate::urls;
 
 pub async fn run() -> Result<(), Box<dyn std::error::Error>> {
-    let urls = pretend::read_lines("census.txt")?;
+    let pretend = pretend::read_lines("census.txt").expect("cannot read pretend lines");
 
-    let client = reqwest::Client::new();
+    // Use get_census_data for main/geo endpoints
+    let results = urls::get_census_data(&pretend).await;
 
-    let futures = urls.iter().map(|url| acs::pull_data(&client, url));
-    let results: Vec<Option<DataFrame>> = join_all(futures).await;
+    use crate::data::{fetch_geo_dataframe, filter_main_dataframe};
 
-    for (i, df_opt) in results.clone().into_iter().enumerate() {
-        match df_opt {
-            Some(df) => println!("DataFrame {}:\n{}", i + 1, df),
-            None => println!("DataFrame {}: Failed to fetch or parse.", i + 1),
-        }
-    }
-    // let geo = &results[1].clone();
-    for (i, geo_opt) in results.clone().into_iter().enumerate() {
-        match geo_opt {
-            Some(geo) => println!("geo {}:\n{}", i + 1, fetch_geo_dataframe(geo)),
-            None => println!("geo {}: Failed to fetch or parse.", i + 1),
-        }
-    }
+    let geo_dfs: Vec<DataFrame> = results
+        .iter()
+        .filter_map(|df_opt| df_opt.as_ref().map(|df| fetch_geo_dataframe(df.clone())))
+        .collect();
+
+    let main_dfs: Vec<DataFrame> = results
+        .iter()
+        .filter_map(|df_opt| df_opt.as_ref().map(|df| filter_main_dataframe(df)))
+        .collect();
+
+    pretend::display(&main_dfs, "Main DataFrame");
+    pretend::display(&geo_dfs, "Geo DataFrame");
+
+    // Use get_census_variables for variable endpoints
+    let var_urls = vec![crate::PLACEHOLDER_VAR_URL.to_string()];
+    let var_results = urls::fetch_all_variable_labels(&var_urls).await;
+    let var_dfs: Vec<DataFrame> = var_results.into_iter().filter_map(|opt| opt).collect();
+    pretend::display(&var_dfs, "Variables DataFrame");
+
     Ok(())
 }
