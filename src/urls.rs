@@ -1,8 +1,11 @@
 use futures::future::join_all;
 
-use crate::acs;
+use crate::{
+    acs,
+    data::{fetch_geo_dataframe, filter_main_dataframe},
+};
 
-use polars::prelude::*;
+use polars::{functions::concat_df_horizontal, prelude::*};
 use reqwest;
 use std::collections::HashMap;
 use url::Url;
@@ -62,4 +65,42 @@ pub async fn fetch_all_variable_labels(urls: &[String]) -> Vec<Option<DataFrame>
         .map(|url| acs::pull_variables(&client, url.as_str()));
     let results: Vec<Option<DataFrame>> = join_all(futures).await;
     results
+}
+
+pub async fn fetch_relevant_variable_labels(urls: &[String]) -> Vec<DataFrame> {
+    let var_labels = fetch_all_variable_labels(urls).await;
+    let results = get_census_data(urls).await;
+
+    let geos: Vec<DataFrame> = results
+        .iter()
+        .filter_map(|df_opt| df_opt.as_ref().map(|df| fetch_geo_dataframe(df.clone())))
+        .collect();
+
+    let dfs: Vec<DataFrame> = results
+        .iter()
+        .filter_map(|df_opt| df_opt.as_ref().map(|df| filter_main_dataframe(df)))
+        .collect();
+
+    let mut merged = Vec::new();
+
+    for (df, geo) in dfs.into_iter().zip(geos.into_iter()) {
+        let concat = concat_df_horizontal(&[df, geo], false).unwrap();
+        // Forward fill nulls for all columns
+        let filled_columns: Vec<_> = concat
+            .get_columns()
+            .iter()
+            .map(|col| {
+                col.as_materialized_series()
+                    .fill_null(polars::prelude::FillNullStrategy::Forward(None))
+                    .unwrap()
+                    .into_column()
+            })
+            .collect();
+        let filled_df = DataFrame::new(filled_columns).unwrap();
+        merged.push(filled_df);
+    }
+
+    merged
+
+    //TODO: now left_join on the variable labels etc...
 }
