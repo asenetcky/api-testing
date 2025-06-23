@@ -68,8 +68,51 @@ pub async fn fetch_all_variable_labels(urls: &[String]) -> Vec<Option<DataFrame>
 }
 
 pub async fn fetch_relevant_variable_labels(urls: &[String]) -> Vec<DataFrame> {
-    let var_labels = fetch_all_variable_labels(urls).await;
+    let mut var_labels = fetch_all_variable_labels(urls).await;
     let results = get_census_data(urls).await;
+
+    // let vars = {
+    //     var_labels.iter().filter_map(|var_opt| {
+    //         var_opt.as_ref().map(|df| {
+    //             df.clone()
+    //                 .rename("name", "variable_id".into())
+    //                 .with_columns(
+    //                     col("label")
+    //                         .str
+    //                         .replace_all("!|:", " ", true)
+    //                         .str
+    //                         .replace_all(r"\s+", " ", true)
+    //                         .str
+    //                         .strip_chars()
+    //                         .str
+    //                         .to_lowercase()
+    //                         .alias("variable_name"),
+    //                     col("concept").str.to_lowercase(),
+    //                 )
+    //         })
+    //     })
+    // };
+
+    // let vars = var_labels.iter_mut().map(|var_opt| {
+    //     var_opt
+    //         .as_mut()
+    //         .expect("Failed to fetch variable labels")
+    //         .rename("name", "variable_id".into())
+    //         .with_columns(
+    //             col("label")
+    //                 .str
+    //                 .replace_all("!|:", " ")
+    //                 .str
+    //                 .replace_all(r"\s+", " ")
+    //                 .str
+    //                 .strip_chars()
+    //                 .str
+    //                 .to_lowercase()
+    //                 .alias("variable_name")
+    //                 .str
+    //                 .replace_all("", value, literal),
+    //         )
+    // });
 
     let geos: Vec<DataFrame> = results
         .iter()
@@ -86,16 +129,18 @@ pub async fn fetch_relevant_variable_labels(urls: &[String]) -> Vec<DataFrame> {
     for (df, geo) in dfs.into_iter().zip(geos.into_iter()) {
         let concat = concat_df_horizontal(&[df, geo], false).unwrap();
         // Forward fill nulls for all columns
-        let filled_columns: Vec<_> = concat
-            .get_columns()
-            .iter()
-            .map(|col| {
-                col.as_materialized_series()
-                    .fill_null(polars::prelude::FillNullStrategy::Forward(None))
-                    .unwrap()
-                    .into_column()
-            })
-            .collect();
+        let filled_columns: Vec<_> = {
+            concat
+                .get_columns()
+                .iter()
+                .map(|col| {
+                    col.as_materialized_series()
+                        .fill_null(polars::prelude::FillNullStrategy::Forward(None))
+                        .unwrap()
+                        .into_column()
+                })
+                .collect()
+        };
         let filled_df = DataFrame::new(filled_columns).unwrap();
         merged.push(filled_df);
     }
